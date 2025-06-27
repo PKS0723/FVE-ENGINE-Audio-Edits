@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>🎀 FVE ENGINE – Audio Editor</title>
+  <style>
+    :root {
+      --bg-color: #f8d3e3;
+      --text-color: #222;
+      --container-bg: #fff;
+      --btn-bg: #ff69b4;
+      --btn-text: #fff;
+    }
+    [data-theme="dark"] {
+      --bg-color: #222;
+      --text-color: #eee;
+      --container-bg: #333;
+      --btn-bg: #ff69b4;
+      --btn-text: #fff;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: var(--container-bg);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      transition: background-color 0.3s;
+      position: relative;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 1.2em;
+    }
+    label, input[type="range"], .btn, select {
+      display: block;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    .slider-label {
+      margin: 10px 0 5px;
+    }
+    .btn {
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    .btn:hover {
+      background: #e858a2;
+    }
+    #audioFile {
+      display: none;
+    }
+    audio {
+      width: 100%;
+      margin-top: 20px;
+      outline: none;
+    }
+    #themeToggle {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      border: none;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    #themeToggle:hover {
+      background: #e858a2;
+    }
+    select {
+      padding: 8px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      background: var(--container-bg);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="container">
+    <button id="themeToggle">Dark Mode</button>
+    <h1>🎀 FVE ENGINE – Audio Editor</h1>
+    <label for="audioFile" class="btn" style="cursor:pointer;">Choose Audio File</label>
+    <input type="file" id="audioFile" accept="audio/*" />
+    <label for="presetSelect" class="slider-label">Choose Preset Filter</label>
+    <select id="presetSelect">
+      <option value="">-- Select Preset --</option>
+      <option value="cartoon">Cartoon</option>
+      <option value="vintage">Vintage</option>
+      <option value="radio">Radio</option>
+      <option value="robot">Robot</option>
+      <option value="clean">Clean (No Effects)</option>
+      <option value="funkyBass">Funky Bass</option>
+      <option value="spacey">Spacey</option>
+      <option value="bitcrusherMadness">Bitcrusher Madness</option>
+      <option value="echoChamber">Echo Chamber</option>
+    </select>
+    <label class="slider-label">Pitch: <span id="pitchVal">1.0x</span></label>
+    <input type="range" id="pitch" min="0.5" max="2.0" value="1.0" step="0.01" />
+    <label class="slider-label">Tremolo Frequency (Hz)</label>
+    <input type="range" id="tremFreq" min="0" max="20" value="5" />
+    <label class="slider-label">Tremolo Depth</label>
+    <input type="range" id="tremDepth" min="0" max="1" value="0.5" step="0.01" />
+    <label class="slider-label">Echo Delay (seconds)</label>
+    <input type="range" id="echoDelay" min="0" max="1" value="0.3" step="0.01" />
+    <label class="slider-label">Echo Decay</label>
+    <input type="range" id="echoDecay" min="0" max="0.9" value="0.3" step="0.01" />
+    <label class="slider-label">Bitcrush (steps)</label>
+    <input type="range" id="bitDepth" min="1" max="16" value="8" />
+    <label class="slider-label">Low-pass Cutoff (Hz)</label>
+    <input type="range" id="lowpass" min="100" max="20000" value="8000" />
+    <label><input type="checkbox" id="reverb" /> Reverb</label>
+    <label><input type="checkbox" id="lofi" /> Lo-Fi Mode</label>
+    <button class="btn" id="playBtn">▶ Preview</button>
+    <button class="btn" id="downloadBtn">💾 Download</button>
+    <audio id="player" controls></audio>
+  </div>
+
+<script>
+  const themeToggle = document.getElementById('themeToggle');
+  const body = document.body;
+  themeToggle.onclick = () => {
+    const isLight = body.getAttribute('data-theme') === 'light';
+    body.setAttribute('data-theme', isLight ? 'dark' : 'light');
+    themeToggle.textContent = isLight ? 'Light Mode' : 'Dark Mode';
+  };
+
+  const pitchSlider = document.getElementById("pitch");
+  const pitchValSpan = document.getElementById("pitchVal");
+  pitchSlider.oninput = () => {
+    pitchValSpan.innerText = pitchSlider.value + "x";
+  };
+
+  const presets = {
+    cartoon: { pitch: 1.3, tremFreq: 8, tremDepth: 0.7, echoDelay: 0.2, echoDecay: 0.4, bitDepth: 4, lowpass: 4000, reverb: false, lofi: true },
+    vintage: { pitch: 1.0, tremFreq: 2, tremDepth: 0.3, echoDelay: 0.35, echoDecay: 0.5, bitDepth: 6, lowpass: 6000, reverb: true, lofi: false },
+    radio: { pitch: 1.0, tremFreq: 0, tremDepth: 0, echoDelay: 0, echoDecay: 0, bitDepth: 12, lowpass: 3500, reverb: false, lofi: true },
+    robot: { pitch: 1.2, tremFreq: 15, tremDepth: 0.8, echoDelay: 0.1, echoDecay: 0.3, bitDepth: 3, lowpass: 5000, reverb: true, lofi: false },
+    clean: { pitch: 1.0, tremFreq: 0, tremDepth: 0, echoDelay: 0, echoDecay: 0, bitDepth: 16, lowpass: 20000, reverb: false, lofi: false },
+    funkyBass: { pitch: 0.7, tremFreq: 0, tremDepth: 0, echoDelay: 0.4, echoDecay: 0.6, bitDepth: 8, lowpass: 3000, reverb: false, lofi: true },
+    spacey: { pitch: 0.9, tremFreq: 3, tremDepth: 0.5, echoDelay: 0.15, echoDecay: 0.4, bitDepth: 10, lowpass: 8000, reverb: true, lofi: false },
+    bitcrusherMadness: { pitch: 1.0, tremFreq: 18, tremDepth: 0.9, echoDelay: 0.25, echoDecay: 0.5, bitDepth: 1, lowpass: 6000, reverb: false, lofi: true },
+    echoChamber: { pitch: 1.0, tremFreq: 0, tremDepth: 0, echoDelay: 0.8, echoDecay: 0.85, bitDepth: 12, lowpass: 20000, reverb: true, lofi: false }
+  };
+
+  const controls = {
+    pitch: pitchSlider,
+    tremFreq: tremFreq,
+    tremDepth: tremDepth,
+    echoDelay: echoDelay,
+    echoDecay: echoDecay,
+    bitDepth: bitDepth,
+    lowpass: lowpass,
+    reverb: reverb,
+    lofi: lofi
+  };
+
+  document.getElementById("presetSelect").onchange = e => {
+    const p = presets[e.target.value];
+    if (!p) return;
+    pitchSlider.value = p.pitch;
+    pitchValSpan.innerText = p.pitch + "x";
+    tremFreq.value = p.tremFreq;
+    tremDepth.value = p.tremDepth;
+    echoDelay.value = p.echoDelay;
+    echoDecay.value = p.echoDecay;
+    bitDepth.value = p.bitDepth;
+    lowpass.value = p.lowpass;
+    reverb.checked = p.reverb;
+    lofi.checked = p.lofi;
+  };
+
+  let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let audioBuffer = null, renderedBlob = null, currentSource = null;
+
+  document.getElementById("audioFile").onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    audioBuffer = await audioCtx.decodeAudioData(buf);
+    document.getElementById("player").src = URL.createObjectURL(file);
+    renderedBlob = null;
+    e.target.value = '';
+  };
+
+  function applyEffects(source, ctx) {
+    const pitch = parseFloat(pitchSlider.value);
+    const now = ctx.currentTime;
+    source.playbackRate.value = pitch;
+    let last = source;
+
+    if (echoDelay.value > 0 && echoDecay.value > 0) {
+      const delay = ctx.createDelay();
+      delay.delayTime.value = echoDelay.value;
+      const feedback = ctx.createGain();
+      feedback.gain.value = echoDecay.value;
+      last.connect(delay);
+      delay.connect(feedback);
+      feedback.connect(delay);
+      last = delay;
+    }
+
+    if (tremDepth.value > 0 && tremFreq.value > 0) {
+      const tremGain = ctx.createGain();
+      tremGain.gain.value = 1.0 - tremDepth.value;
+      const tremOsc = ctx.createOscillator();
+      const tremMod = ctx.createGain();
+      tremOsc.frequency.value = tremFreq.value;
+      tremMod.gain.value = tremDepth.value;
+      tremOsc.connect(tremMod);
+      tremMod.connect(tremGain.gain);
+      tremOsc.start();
+      last.connect(tremGain);
+      last = tremGain;
+    }
+
+    if (lowpass.value < 20000) {
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setTargetAtTime(lowpass.value, now, 0.05);
+      last.connect(lp);
+      last = lp;
+    }
+
+    if (lofi.checked) {
+      const lofiF = ctx.createBiquadFilter();
+      lofiF.type = "lowpass";
+      lofiF.frequency.setTargetAtTime(3000, now, 0.05);
+      const lofiG = ctx.createGain();
+      lofiG.gain.value = 0.8;
+      last.connect(lofiF);
+      lofiF.connect(lofiG);
+      last = lofiG;
+    }
+
+    if (reverb.checked) {
+      const conv = ctx.createConvolver();
+      const imp = ctx.createBuffer(2, 2 * ctx.sampleRate, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = imp.getChannelData(ch);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      }
+      conv.buffer = imp;
+      last.connect(conv);
+      last = conv;
+    }
+
+    const outGain = ctx.createGain();
+    outGain.gain.setValueAtTime(0.0, now);
+    outGain.gain.linearRampToValueAtTime(1.0, now + 0.03); // fade-in
+    outGain.gain.setValueAtTime(1.0, now + source.buffer.duration - 0.03);
+    outGain.gain.linearRampToValueAtTime(0.0, now + source.buffer.duration); // fade-out
+    outGain.gain.value = Math.min(1, 1 / pitch);
+    last.connect(outGain);
+    outGain.connect(ctx.destination);
+  }
+
+  document.getElementById("playBtn").onclick = async () => {
+    if (!audioBuffer) return alert("Please upload a file first!");
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (currentSource) {
+      try { currentSource.stop(); } catch {}
+      currentSource.disconnect();
+      currentSource = null;
+    }
+    const player = document.getElementById("player");
+    player.pause(); player.currentTime = 0;
+
+    const liveSource = audioCtx.createBufferSource();
+    liveSource.buffer = audioBuffer;
+    applyEffects(liveSource, audioCtx);
+    liveSource.start();
+    currentSource = liveSource;
+
+    const offlineCtx = new OfflineAudioContext(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+    const offlineSource = offlineCtx.createBufferSource();
+    offlineSource.buffer = audioBuffer;
+    applyEffects(offlineSource, offlineCtx);
+    offlineSource.start();
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    const wav = audioBufferToWav(renderedBuffer);
+    renderedBlob = new Blob([wav], { type: "audio/wav" });
+    player.src = URL.createObjectURL(renderedBlob);
+    player.load();
+  };
+
+  document.getElementById("downloadBtn").onclick = () => {
+    if (!renderedBlob) return alert("Please preview before downloading!");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(renderedBlob);
+    a.download = "edited_audio.wav";
+    a.click();
+  };
+
+  function audioBufferToWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const length = buffer.length * numChannels * 2 + 44;
+    const arrayBuffer = new ArrayBuffer(length);
+    const view = new DataView(arrayBuffer);
+    function writeString(v, offset, s) { for (let i = 0; i < s.length; i++) v.setUint8(offset + i, s.charCodeAt(i)); }
+    let offset = 0;
+    writeString(view, offset, 'RIFF'); offset += 4;
+    view.setUint32(offset, length - 8, true); offset += 4;
+    writeString(view, offset, 'WAVE'); offset += 4;
+    writeString(view, offset, 'fmt '); offset += 4;
+    view.setUint32(offset, 16, true); offset += 4;
+    view.setUint16(offset, 1, true); offset += 2;
+    view.setUint16(offset, numChannels, true); offset += 2;
+    view.setUint32(offset, buffer.sampleRate, true); offset += 4;
+    view.setUint32(offset, buffer.sampleRate * numChannels * 2, true); offset += 4;
+    view.setUint16(offset, numChannels * 2, true); offset += 2;
+    view.setUint16(offset, 16, true); offset += 2;
+    writeString(view, offset, 'data'); offset += 4;
+    view.setUint32(offset, length - offset - 4, true); offset += 4;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let ch = 0; ch < numChannels; ch++) {
+        let sample = buffer.getChannelData(ch)[i];
+        sample = Math.max(-1, Math.min(1, sample));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+    return arrayBuffer;
+  }
+</script>
+</body>
+</html>
